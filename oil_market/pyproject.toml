@@ -1,0 +1,11 @@
+[project]
+name = "streamlit-dashboard-starter"
+version = "1.1.3"
+requires-python = ">=3.11,<3.12"
+dependencies = [
+  "pandas==3.0.5",
+  "streamlit==1.63.0"
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

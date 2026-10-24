@@ -1,0 +1,160 @@
+schema_version: 2
+dashboard:
+  title: Global Crude Oil Trade
+  subject: oil_market
+  question: How have the roles of major crude oil importing and exporting countries changed over time?
+  audience: Interested non-specialists
+  entrypoint: app.py
+  pages: []
+  sample_environment_variable: DASHBOARD_SAMPLE_MODE
+sources:
+- id: eia_international_energy
+  publisher: U.S. Energy Information Administration
+  title: EIA International Energy Statistics
+  url: https://www.eia.gov/international/data/world
+  licence: U.S. government public data
+  retrieved: '2026-10-05'
+  cadence: Annual
+  status: snapshot
+  notes: Annual crude oil including lease condensate imports and exports. Country coverage varies over time and falls substantially after 2018.
+datasets:
+- id: oil_trade
+  source_ids:
+  - eia_international_energy
+  sample: data/sample.csv
+  processed_output: data/processed.csv
+  format: csv
+  date_column: date
+  primary_key:
+  - country
+  - year
+  minimum_rows: 200
+  latest_observation: '2020-12-31'
+  columns:
+    date:
+      type: date
+      role: time
+      nullable: false
+      date_minimum: '1980-12-31'
+      date_maximum: '2020-12-31'
+    year:
+      type: integer
+      role: dimension
+      nullable: false
+      minimum: 1980
+      maximum: 2020
+    country:
+      type: string
+      role: geography
+      nullable: false
+    imports_series_code:
+      type: string
+      role: identifier
+      nullable: false
+    exports_series_code:
+      type: string
+      role: identifier
+      nullable: false
+    crude_imports:
+      type: number
+      role: measure
+      nullable: true
+      unit: Mb/d
+      minimum: 0
+      maximum: 11000
+    crude_exports:
+      type: number
+      role: measure
+      nullable: true
+      unit: Mb/d
+      minimum: 0
+      maximum: 10000
+    net_exports:
+      type: number
+      role: measure
+      nullable: true
+      unit: Mb/d
+      minimum: -11000
+      maximum: 10000
+    unit:
+      type: string
+      role: dimension
+      nullable: false
+      allowed_values:
+      - Mb/d
+views:
+- id: major_traders
+  dataset_id: oil_trade
+  page: app.py
+  title: Major Importers & Exporters
+  unit: Mb/d
+  source_ids:
+  - eia_international_energy
+  controls:
+  - key: trade_year_filter
+    type: selectbox
+    label: Year
+    default_value: 2018
+    test_value: 2017
+    expected_text: 'Selected: 2017, Imports'
+    filter:
+      column: year
+      operator: equals
+  - key: trade_flow_filter
+    type: radio
+    label: Trade flow
+    default_value: Imports
+    test_value: Exports
+    expected_text: 'Selected: 2018, Exports'
+  outputs:
+  - chart
+  - metric
+  - download
+- id: country_trade_trends
+  dataset_id: oil_trade
+  page: app.py
+  title: Country Trade Trends
+  unit: Mb/d
+  source_ids:
+  - eia_international_energy
+  controls:
+  - key: trade_trend_country_filter
+    type: multiselect
+    label: Countries
+    default_value:
+    - United States
+    - China
+    - Saudi Arabia
+    test_value:
+    - United States
+    expected_text: 'Selected: United States'
+    empty_test_value: []
+    empty_expected_text: No observations match the selected filters.
+    filter:
+      column: country
+      operator: isin
+  - key: trade_trend_measure_filter
+    type: radio
+    label: Measure
+    default_value: Imports
+    test_value: Net exports
+    expected_text: 'Net exports'
+  outputs:
+  - chart
+  - metric
+  - download
+pipeline:
+  acquisition_method: script
+  acquisition_path: src/data.py
+  transform_command:
+  - python
+  - -m
+  - src.data
+  download_declared: true
+  download_label: Download filtered data
+  date_label: Latest observation
+topic_integrity:
+  physical_units: Million barrels per day (Mb/d) for annual crude oil including lease condensate imports and exports.
+  frequency: Annual observations.
+  observation_status: Historical EIA observations. Missing observations are retained as missing rather than treated as zero, and country coverage varies over time.
+  publication_vintage: EIA International Energy Statistics snapshot downloaded in October 2026.
