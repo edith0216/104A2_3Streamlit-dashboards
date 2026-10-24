@@ -1,0 +1,267 @@
+schema_version: 2
+dashboard:
+  title: Global CO2 Emissions Trends and Drivers
+  subject: global_warming
+  question: Are global CO2 emissions still accelerating, and which countries and sectors drive the trend?
+  audience: Interested non-specialists
+  entrypoint: app.py
+  pages:
+  - pages/1_Country_Drivers.py
+  - pages/2_Sector_Drivers.py
+  sample_environment_variable: DASHBOARD_SAMPLE_MODE
+sources:
+- id: edgar_co2
+  publisher: European Commission Joint Research Centre (JRC) and International Energy Agency (IEA)
+  title: EDGAR - Emissions Database for Global Atmospheric Research
+  url: https://edgar.jrc.ec.europa.eu/dataset_ghg2026
+  licence: CC BY-NC-ND 4.0
+  retrieved: '2026-09-28'
+  cadence: Annual with revisions
+  status: snapshot
+  notes: Annual CO2 emissions by country and IPCC 2006 sector, 1970-2025.
+datasets:
+- id: country_emissions
+  source_ids:
+  - edgar_co2
+  sample: data/sample.csv
+  processed_output: data/processed.csv
+  format: csv
+  date_column: date
+  primary_key:
+  - date
+  - country_code
+  minimum_rows: 1000
+  latest_observation: '2025-12-31'
+  columns:
+    date:
+      type: date
+      role: time
+      nullable: false
+      date_minimum: '1970-12-31'
+      date_maximum: '2025-12-31'
+    country_code:
+      type: string
+      role: dimension
+      nullable: false
+    country:
+      type: string
+      role: dimension
+      nullable: false
+    year:
+      type: integer
+      role: dimension
+      nullable: false
+    entity_type:
+      type: string
+      role: dimension
+      nullable: false
+    substance:
+      type: string
+      role: dimension
+      nullable: false
+    emissions_gg:
+      type: number
+      role: measure
+      nullable: true
+      unit: Gg CO2
+      minimum: 0
+    unit:
+      type: string
+      role: dimension
+      nullable: false
+- id: sector_emissions
+  source_ids:
+  - edgar_co2
+  sample: data/sample_sector.csv
+  processed_output: data/processed_sector.csv
+  format: csv
+  date_column: date
+  primary_key:
+  - date
+  - sector_code
+  minimum_rows: 1000
+  latest_observation: '2025-12-31'
+  columns:
+    date:
+      type: date
+      role: time
+      nullable: false
+      date_minimum: '1970-12-31'
+      date_maximum: '2025-12-31'
+    sector_code:
+      type: string
+      role: dimension
+      nullable: false
+    sector:
+      type: string
+      role: dimension
+      nullable: false
+    year:
+      type: integer
+      role: dimension
+      nullable: false
+    substance:
+      type: string
+      role: dimension
+      nullable: false
+    emissions_gg:
+      type: number
+      role: measure
+      nullable: false
+      unit: Gg CO2
+      minimum: 0
+    unit:
+      type: string
+      role: dimension
+      nullable: false
+views:
+- id: global_trend
+  dataset_id: sector_emissions
+  page: app.py
+  title: Global CO2 Emissions Trend
+  unit: Gg CO2
+  source_ids:
+  - edgar_co2
+  controls:
+  - key: global_year_range
+    type: slider
+    label: Year range
+    default_value:
+    - 1970
+    - 2025
+    test_value:
+    - 2000
+    - 2025
+    expected_text: 'Selected years: 2000-2025'
+    filter:
+      column: year
+      operator: range
+  - key: global_sector_filter
+    type: multiselect
+    label: Sectors
+    default_value:
+      - Cement production
+      - Chemical Industry
+      - Civil Aviation
+      - Fossil fuel fires
+      - Glass Production
+      - Incineration and Open Burning of Waste
+      - Lime production
+      - Liming
+      - Main Activity Electricity and Heat Production
+      - Manufacturing Industries and Construction
+      - Metal Industry
+      - Non-Energy Products from Fuels and Solvent Use
+      - Non-Specified
+      - Oil and Natural Gas
+      - Other Process Uses of Carbonates
+      - Other Transportation
+      - Petroleum Refining - Manufacture of Solid Fuels and Other Energy Industries
+      - Railways
+      - Residential and other sectors
+      - Road Transportation
+      - Solid Fuels
+      - Urea application
+      - Water-borne Navigation
+    test_value:
+      - Main Activity Electricity and Heat Production
+    expected_text: 'Selected sectors: Main Activity Electricity and Heat Production'
+    empty_test_value: []
+    empty_expected_text: No observations match the selected filters.
+    filter:
+      column: sector
+      operator: isin
+  outputs:
+  - chart
+  - metric
+  - download
+- id: country_drivers
+  dataset_id: country_emissions
+  page: pages/1_Country_Drivers.py
+  title: Country Drivers of CO2 Emissions Change
+  unit: Gg CO2
+  source_ids:
+  - edgar_co2
+  controls:
+  - key: country_year_range
+    type: slider
+    label: Year range
+    default_value:
+    - 1970
+    - 2025
+    test_value:
+    - 2000
+    - 2025
+    expected_text: 'Selected years: 2000-2025'
+    filter:
+      column: year
+      operator: range
+  - key: country_entity_filter
+    type: multiselect
+    label: Entity type
+    default_value:
+      - country
+    test_value:
+      - international
+    expected_text: 'Selected entity types: international'
+    empty_test_value: []
+    empty_expected_text: No observations match the selected filters.
+    filter:
+      column: entity_type
+      operator: isin
+  outputs:
+  - chart
+  - metric
+  - download
+- id: sector_drivers
+  dataset_id: sector_emissions
+  page: pages/2_Sector_Drivers.py
+  title: Sector Drivers of CO2 Emissions Change
+  unit: Gg CO2
+  source_ids:
+  - edgar_co2
+  controls:
+  - key: sector_year_range
+    type: slider
+    label: Year range
+    default_value:
+    - 1970
+    - 2025
+    test_value:
+    - 2000
+    - 2025
+    expected_text: 'Selected years: 2000-2025'
+    filter:
+      column: year
+      operator: range
+  - key: sector_filter
+    type: multiselect
+    label: Sectors
+    default_value:
+      - Main Activity Electricity and Heat Production
+      - Manufacturing Industries and Construction
+    test_value:
+      - Main Activity Electricity and Heat Production
+    expected_text: 'Selected sectors: Main Activity Electricity and Heat Production'
+    empty_test_value: []
+    empty_expected_text: No observations match the selected filters.
+    filter:
+      column: sector
+      operator: isin
+  outputs:
+  - chart
+  - metric
+  - download
+pipeline:
+  acquisition_method: manual
+  acquisition_path: src/data.py
+  transform_command:
+  - python
+  - -m
+  - src.data
+  download_declared: true
+  download_label: Download filtered data
+  date_label: Latest observation
+topic_integrity:
+  measurement_status: Historical annual fossil CO2 emissions.
+  geographic_coverage: Global coverage by country/entity, including international aviation and shipping.
