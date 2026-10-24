@@ -1,0 +1,162 @@
+schema_version: 2
+dashboard:
+  title: COVID-19 Mortality Across Selected Countries
+  subject: sars_cov_2
+  question: How did reported COVID-19 mortality evolve across selected countries and pandemic waves?
+  audience: Interested non-specialists
+  entrypoint: app.py
+  pages: []
+  sample_environment_variable: DASHBOARD_SAMPLE_MODE
+sources:
+- id: who_covid
+  publisher: World Health Organization
+  title: WHO COVID-19 global data
+  url: https://data.who.int/dashboards/covid19/data?n=o
+  licence: Creative Commons Attribution 4.0 International (CC BY 4.0)
+  retrieved: '2026-09-29'
+  cadence: Weekly with revisions
+  status: snapshot
+  notes: Weekly reported COVID-19 deaths may include missing observations and retrospective corrections.
+datasets:
+- id: covid_mortality
+  source_ids:
+  - who_covid
+  sample: data/sample.csv
+  processed_output: data/processed.csv
+  format: csv
+  date_column: date
+  primary_key:
+  - date
+  - country
+  minimum_rows: 1000
+  latest_observation: '2026-09-06'
+  columns:
+    date:
+      type: date
+      role: time
+      nullable: false
+      date_minimum: '2020-01-05'
+      date_maximum: '2026-09-06'
+    year:
+      type: integer
+      role: dimension
+      nullable: false
+      minimum: 2020
+      maximum: 2026
+    country_code:
+      type: string
+      role: geography
+      nullable: false
+    country:
+      type: string
+      role: geography
+      nullable: false
+    who_region:
+      type: string
+      role: geography
+      nullable: false
+    weekly_deaths:
+      type: number
+      role: measure
+      nullable: true
+      unit: reported deaths
+      minimum: -100
+      maximum: 50000
+    cumulative_deaths:
+      type: number
+      role: measure
+      nullable: false
+      unit: reported deaths
+      minimum: 0
+      maximum: 1300000
+    unit:
+      type: string
+      role: dimension
+      nullable: false
+      allowed_values:
+      - reported deaths
+views:
+- id: country_comparison
+  dataset_id: covid_mortality
+  page: app.py
+  title: Country Comparison
+  unit: reported deaths
+  source_ids:
+  - who_covid
+  controls:
+  - key: comparison_country_filter
+    type: multiselect
+    label: Countries
+    default_value:
+    - Australia
+    - United Kingdom of Great Britain and Northern Ireland
+    - United States of America
+    test_value:
+    - Australia
+    expected_text: 'Selected: Australia'
+    empty_test_value: []
+    empty_expected_text: No observations match the selected filters.
+    filter:
+      column: country
+      operator: isin
+  outputs:
+  - chart
+  - metric
+  - download
+- id: pandemic_waves
+  dataset_id: covid_mortality
+  page: app.py
+  title: Pandemic Waves
+  unit: reported deaths
+  source_ids:
+  - who_covid
+  controls:
+  - key: waves_country_filter
+    type: multiselect
+    label: Country
+    default_value:
+    - Australia
+    test_value:
+    - United States of America
+    expected_text: 'Selected: United States of America'
+    empty_test_value: []
+    empty_expected_text: No observations match the selected filters.
+    filter:
+      column: country
+      operator: isin
+  outputs:
+  - chart
+  - metric
+  - download
+pipeline:
+  acquisition_method: script
+  acquisition_path: src/data.py
+  transform_command:
+  - python
+  - -m
+  - src.data
+  download_declared: true
+  download_label: Download filtered data
+  date_label: Latest observation
+topic_integrity:
+  indicator_codes:
+  - New_deaths
+  - Cumulative_deaths
+  original_source_organizations:
+  - World Health Organization
+  latest_observation_year: 2026
+  indicator_definition: Reported weekly and cumulative COVID-19 deaths by country or area.
+  aggregation_method: Country Comparison uses country-level reported deaths; Pandemic Waves uses weekly country-level reported deaths and may display a four-week rolling average.
+  classification_vintage: WHO country and regional classifications as reported in the source dataset.
+  outcome_definition: >-
+    Weekly reported COVID-19 deaths and cumulative reported COVID-19 deaths
+    as published by the World Health Organization.
+  date_basis: >-
+    Date_reported, representing the weekly reporting date in the WHO dataset.
+  surveillance_status: >-
+    Reported surveillance data may be revised retrospectively and should not
+    be interpreted as a complete measure of all COVID-19 deaths.
+  coverage_limitations: >-
+    Reporting practices and completeness vary across countries and over time.
+    Missing weekly death observations are retained as missing, and reported
+    counts are not adjusted for population size.
